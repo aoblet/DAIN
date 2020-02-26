@@ -34,7 +34,7 @@ class FilterInterpolationLayer(Function):
             my_lib.FilterInterpolationLayer_gpu_forward(input1, input2, input3, output)
         else:
             output = torch.FloatTensor(input1.data.size())
-            my_lib.FilterInterpolationLayer_cpu_forward(input1, input2, input3, output)
+            my_lib.FilterInterpolationLayer_gpu_forward(input1, input2, input3, output)
 
         ctx.save_for_backward(input1, input2,input3)
         # the function returns the output to its caller

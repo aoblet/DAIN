@@ -142,8 +142,8 @@ class PWCDCNet(nn.Module):
         W_MAX = 2048
         H_MAX = 1024
         B_MAX = 3
-        xx = torch.arange(0, W_MAX).view(1,-1).cuda().repeat(H_MAX,1)
-        yy = torch.arange(0, H_MAX).view(-1,1).cuda().repeat(1,W_MAX)
+        xx = torch.arange(0, W_MAX).view(1,-1).repeat(H_MAX,1)
+        yy = torch.arange(0, H_MAX).view(-1,1).repeat(1,W_MAX)
         xx = xx.view(1,1,H_MAX,W_MAX).repeat(B_MAX,1,1,1)
         yy = yy.view(1,1,H_MAX,W_MAX).repeat(B_MAX,1,1,1)
         grid = torch.cat((xx,yy),1).float()
@@ -176,6 +176,10 @@ class PWCDCNet(nn.Module):
         # #     grid = grid.cuda()
         # vgrid = Variable(grid) + flo
         assert(B <= self.B_MAX and H <= self.H_MAX and W <= self.W_MAX)
+        print(B)
+        print(H)
+        print(W)
+
         vgrid = self.grid[:B,:,:H,:W] +flo
 
         # scale grid to [-1,1] 
@@ -186,7 +190,7 @@ class PWCDCNet(nn.Module):
         vgrid = vgrid.permute(0,2,3,1)        
         output = nn.functional.grid_sample(x, vgrid)
         # mask = torch.autograd.Variable(torch.ones(x.size())).cuda()
-        mask = torch.autograd.Variable(torch.cuda.FloatTensor().resize_(x.size()).zero_() + 1, requires_grad = False)
+        mask = torch.autograd.Variable(torch.FloatTensor().resize_(x.size()).zero_() + 1, requires_grad = False)
         mask = nn.functional.grid_sample(mask, vgrid)
 
         # if W==128:
@@ -440,7 +444,7 @@ class PWCDCNet_old(nn.Module):
 
         vgrid = vgrid.permute(0,2,3,1)        
         output = nn.functional.grid_sample(x, vgrid)
-        mask = torch.autograd.Variable(torch.ones(x.size())).cuda()
+        mask = torch.autograd.Variable(torch.ones(x.size()))
         mask = nn.functional.grid_sample(mask, vgrid)
         
         mask[mask<0.999] = 0

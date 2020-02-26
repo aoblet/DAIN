@@ -36,7 +36,7 @@ class DepthFlowProjectionLayer(Function):
             # output = torch.cuda.FloatTensor(input1.data.size())
             count = torch.FloatTensor().resize_(input1.size(0), 1, input1.size(2), input1.size(3)).zero_()
             output = torch.FloatTensor().resize_(input1.size()).zero_()
-            err = my_lib.DepthFlowProjectionLayer_cpu_forward(input1,input2, count, output,fillhole)
+            err = my_lib.DepthFlowProjectionLayer_gpu_forward(input1,input2, count, output,fillhole)
         if err != 0:
             print(err)
         # output = output/count # to divide the counter

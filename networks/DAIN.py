@@ -125,34 +125,34 @@ class DAIN(torch.nn.Module):
         '''
         time_offsets = [ kk * self.timestep for kk in range(1, 1+self.numFrames,1)]
 
-        with torch.cuda.stream(s1):
-            temp  = self.depthNet(torch.cat((cur_filter_input[:, :3, ...],
-                                             cur_filter_input[:, 3:, ...]),dim=0))
-            log_depth = [temp[:cur_filter_input.size(0)], temp[cur_filter_input.size(0):]]
+        # with torch.cuda.stream(s1):
+        temp  = self.depthNet(torch.cat((cur_filter_input[:, :3, ...],
+                                         cur_filter_input[:, 3:, ...]),dim=0))
+        log_depth = [temp[:cur_filter_input.size(0)], temp[cur_filter_input.size(0):]]
 
-            cur_ctx_output = [
-                torch.cat((self.ctxNet(cur_filter_input[:, :3, ...]),
-                       log_depth[0].detach()), dim=1),
-                    torch.cat((self.ctxNet(cur_filter_input[:, 3:, ...]),
-                   log_depth[1].detach()), dim=1)
+        cur_ctx_output = [
+            torch.cat((self.ctxNet(cur_filter_input[:, :3, ...]),
+                   log_depth[0].detach()), dim=1),
+                torch.cat((self.ctxNet(cur_filter_input[:, 3:, ...]),
+               log_depth[1].detach()), dim=1)
+                ]
+        temp = self.forward_singlePath(self.initScaleNets_filter, cur_filter_input, 'filter')
+        cur_filter_output = [self.forward_singlePath(self.initScaleNets_filter1, temp, name=None),
+                         self.forward_singlePath(self.initScaleNets_filter2, temp, name=None)]
+
+
+        depth_inv = [1e-6 + 1 / torch.exp(d) for d in log_depth]
+
+        # with torch.cuda.stream(s2):
+        for _ in range(1):
+            cur_offset_outputs = [
+                    self.forward_flownets(self.flownets, cur_offset_input, time_offsets=time_offsets),
+                    self.forward_flownets(self.flownets, torch.cat((cur_offset_input[:, 3:, ...],
+                                        cur_offset_input[:, 0:3, ...]), dim=1),
+                              time_offsets=time_offsets[::-1])
                     ]
-            temp = self.forward_singlePath(self.initScaleNets_filter, cur_filter_input, 'filter')
-            cur_filter_output = [self.forward_singlePath(self.initScaleNets_filter1, temp, name=None),
-                             self.forward_singlePath(self.initScaleNets_filter2, temp, name=None)]
 
-
-            depth_inv = [1e-6 + 1 / torch.exp(d) for d in log_depth]
-
-        with torch.cuda.stream(s2):
-            for _ in range(1):
-                cur_offset_outputs = [
-                        self.forward_flownets(self.flownets, cur_offset_input, time_offsets=time_offsets),
-                        self.forward_flownets(self.flownets, torch.cat((cur_offset_input[:, 3:, ...],
-                                            cur_offset_input[:, 0:3, ...]), dim=1),
-                                  time_offsets=time_offsets[::-1])
-                        ]
-
-        torch.cuda.synchronize() #synchronize s1 and s2
+        # torch.cuda.synchronize() #synchronize s1 and s2
 
         cur_offset_outputs = [
             self.FlowProject(cur_offset_outputs[0],depth_inv[0]),
@@ -195,7 +195,6 @@ class DAIN(torch.nn.Module):
             return cur_outputs,cur_offset_output,cur_filter_output
 
     def forward_flownets(self, model, input, time_offsets = None):
-
         if time_offsets == None :
             time_offsets = [0.5]
         elif type(time_offsets) == float:
